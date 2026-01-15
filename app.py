@@ -69,6 +69,8 @@ if user_name:
         
         st.info("💡 Tu peux copier-coller depuis Excel ou taper directement dans le tableau !")
         
+        # Note: use_container_width is deprecated in recent Streamlit, using plain call or width if needed.
+        # However, for now we stick to standard call.
         edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
         
         col1, col2 = st.columns(2)
@@ -107,16 +109,19 @@ if user_name:
 
         with col2:
              # Excel Export
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                edited_df.to_excel(writer, index=False)
-            
-            st.download_button(
-                label="📥 Exporter en Excel",
-                data=buffer.getvalue(),
-                file_name=f"collection_{user_name}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            try:
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    edited_df.to_excel(writer, index=False)
+                
+                st.download_button(
+                    label="📥 Exporter en Excel",
+                    data=buffer.getvalue(),
+                    file_name=f"collection_{user_name}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            except Exception as e:
+                 st.error(f"Erreur export: {e}")
 
     with tab2:
         st.header("Rapport d'Échanges")
