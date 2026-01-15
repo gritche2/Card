@@ -85,3 +85,11 @@ def get_all_data():
         
     conn.close()
     return all_needs, all_duplicates
+
+def get_users():
+    conn = sqlite3.connect(DB_NAME, timeout=20)
+    c = conn.cursor()
+    c.execute("SELECT name FROM users ORDER BY name")
+    users = [row[0] for row in c.fetchall()]
+    conn.close()
+    return users
