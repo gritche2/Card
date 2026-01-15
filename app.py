@@ -40,7 +40,64 @@ if user_name:
          st.session_state["current_user"] = user_name
     
     # Add user to DB silently to ensure existence
-    db.add_user(user_name)
+    # Admin Section in Sidebar
+    st.sidebar.divider()
+    with st.sidebar.expander("Administration"):
+        pwd = st.text_input("Mot de passe", type="password")
+        if pwd == "basket":
+            st.success("Mode Admin")
+            
+            # Export Global
+            if st.button("📥 Exporter TOUT"):
+                all_needs, all_duplicates = db.get_all_data()
+                rows = []
+                for u, needs in all_needs.items():
+                    for n in needs:
+                        rows.append({"User": u, "Sticker": n, "Type": "Manquant"})
+                for u, dups in all_duplicates.items():
+                    for d in dups:
+                        rows.append({"User": u, "Sticker": d, "Type": "Double"})
+                
+                df_all = pd.DataFrame(rows)
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    df_all.to_excel(writer, index=False)
+                
+                st.download_button("Télécharger Excel", buffer.getvalue(), "global_export.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            
+            st.divider()
+            
+            # Import Global
+            uploaded_file = st.file_uploader("Importer (ECRASE TOUT)", type=["xlsx"])
+            if uploaded_file and st.button("⚠️ Lancer l'import"):
+                try:
+                    df_import = pd.read_excel(uploaded_file)
+                    # Expected columns: User, Sticker, Type (Manquant/Double)
+                    required_cols = {'User', 'Sticker', 'Type'}
+                    if not required_cols.issubset(df_import.columns):
+                        st.error(f"Format invalide. Colonnes requises : {required_cols}")
+                    else:
+                        db.reset_db()
+                        users_data = {} # {user: {'needs': [], 'dups': []}}
+                        
+                        for _, row in df_import.iterrows():
+                            u = row['User']
+                            if u not in users_data:
+                                users_data[u] = {'needs': [], 'dups': []}
+                            
+                            s_num = row['Sticker']
+                            if str(row['Type']).lower() in ['manquant', 'manquante']:
+                                users_data[u]['needs'].append(s_num)
+                            elif str(row['Type']).lower() in ['double']:
+                                users_data[u]['dups'].append(s_num)
+                        
+                        for u, data in users_data.items():
+                             db.update_collection(u, data['needs'], data['dups'])
+                        
+                        st.success("✅ Base de données restaurée avec succès !")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur import : {e}")
 
     # Tabs
     tab1, tab2 = st.tabs(["Ma Collection", "Rapport d'Échanges"])

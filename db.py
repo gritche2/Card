@@ -22,6 +22,15 @@ def init_db():
     conn.commit()
     conn.close()
 
+def reset_db():
+    conn = sqlite3.connect(DB_NAME, timeout=20)
+    c = conn.cursor()
+    c.execute("DELETE FROM needs")
+    c.execute("DELETE FROM duplicates")
+    c.execute("DELETE FROM users")
+    conn.commit()
+    conn.close()
+
 def add_user(name):
     conn = sqlite3.connect(DB_NAME, timeout=20)
     c = conn.cursor()
